@@ -55,16 +55,18 @@ def plot_csv_data(file_path):
 
         # Plot
         plt.figure(figsize=(10, 6))
+        #time_points = [(i/16384) * 134.218 for i in range(len(data))]
+        #plt.plot(time_points,data, label="Signal")
         plt.plot(data, label="Signal")
         plt.title("Signal Data from Red Pitaya")
-        plt.xlabel("Sample Index")
+        plt.xlabel("Time (ms)")
         plt.ylabel("Amplitude")
         plt.legend()
         plt.grid()
 
         # Compute the FFT
         fft_data = np.fft.fft(data)
-        fft_freqs = np.fft.fftfreq(len(data), d=1/(125*10**6))
+        fft_freqs = np.fft.fftfreq(len(data), d=1/(2048*10**6))
 
         # Only consider the positive frequencies
         positive_freqs = fft_freqs[:len(data) // 2]
@@ -88,22 +90,17 @@ def plot_csv_data(file_path):
 # Main function
 def main():
     # Connection details
-    red_pitaya_host = "205.208.56.192"
-    red_pitaya_user = "root"
-    red_pitaya_password = "root"
-    remote_csv_path = "/root/acquisition_data.csv"  # Path on Red Pitaya
-    local_csv_path = "acquisition_data.csv"  # Local destination
-    #fetch_files_from_directory(
-    #    host="205.208.56.192",
-    #    username="root",
-    #    password="root",
-    #    remote_directory="/root",
-    #    files=["data.csv", "*.png"]
-    #)
+    fetch_files_from_directory(
+        host="205.208.56.215",
+        username="root",
+        password="root",
+        remote_directory="/root",
+        files=["data.csv", "*.png", "acquisition_data.csv"]
+    )
 
 
     # Plot the data
-    plot_csv_data(local_csv_path)
+    plot_csv_data("root/acquisition_data.csv")
 
 
 if __name__ == "__main__":

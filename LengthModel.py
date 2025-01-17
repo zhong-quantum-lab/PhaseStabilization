@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 lambda_nm = 1550e-9  # Wavelength in meters
 alpha_T = 5e-7  # Thermal expansion coefficient
-L1 = 1000
+L1 = 2
 L2 = L1
 def DeltaT(t):
     return np.random.normal(0, 0.5)
