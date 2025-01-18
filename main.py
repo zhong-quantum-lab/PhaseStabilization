@@ -47,34 +47,35 @@ def fetch_files_from_directory(host, username, password, remote_directory, files
         ssh.close()
 
 # Plot the CSV data
-def plot_csv_data(file_path):
+def plot_csv_data(signal, time_points, volts=True):
     """Plot the data from the CSV file."""
     try:
-        # Load the data
-        data = np.loadtxt(file_path, delimiter=",")
 
-        # Plot
+        # Plot the signal data
         plt.figure(figsize=(10, 6))
-        #time_points = [(i/16384) * 134.218 for i in range(len(data))]
-        #plt.plot(time_points,data, label="Signal")
-        plt.plot(data, label="Signal")
-        plt.title("Signal Data from Red Pitaya")
-        plt.xlabel("Time (ms)")
-        plt.ylabel("Amplitude")
-        plt.legend()
-        plt.grid()
+        if volts:
+            signal = signal/8196
+        plt.plot(time_points, signal, label="Signal")
+        plt.title("Signal Data from Red Pitaya", fontsize=16)
+        plt.xlabel("Time (s)", fontsize=14)
+        plt.ylabel("Amplitude", fontsize=14)
+        plt.legend(fontsize=12)
+        plt.grid(True, linestyle="--", alpha=0.6)
+        plt.tight_layout()
 
         # Compute the FFT
-        fft_data = np.fft.fft(data)
-        fft_freqs = np.fft.fftfreq(len(data), d=1/(2048*10**6))
+        sampling_interval = time_points[1] - time_points[0]  # Calculate sampling interval from time data
+        sampling_rate = 1 / sampling_interval
+        fft_data = np.fft.fft(signal)
+        fft_freqs = np.fft.fftfreq(len(signal), d=sampling_interval)
 
         # Only consider the positive frequencies
-        positive_freqs = fft_freqs[:len(data) // 2]
-        positive_fft = np.abs(fft_data[:len(data) // 2])
+        positive_freqs = fft_freqs[:len(signal) // 2]
+        positive_fft = np.abs(fft_data[:len(signal) // 2])
 
         # Plot the FFT
         plt.figure(figsize=(10, 6))
-        plt.plot(positive_freqs/(10**3), positive_fft, label="FFT", color="orange", linewidth=1.5)
+        plt.plot(positive_freqs / 1e3, positive_fft, label="FFT", color="orange", linewidth=1.5)
         plt.title("FFT of Signal Data", fontsize=16)
         plt.xlabel("Frequency (kHz)", fontsize=14)
         plt.ylabel("Amplitude", fontsize=14)
@@ -86,7 +87,32 @@ def plot_csv_data(file_path):
     except Exception as e:
         print(f"Error reading or plotting data: {e}")
 
+def analyze_locking_time(signal, time_points):
+    def in_range(val):
+        lock_value = 1756
+        lock_width = 5
+        return lock_value + lock_width > val > lock_value - lock_width
 
+    only_locked = [in_range(val) for val in signal]
+    in_sequence = False
+    sequence_lengths = []
+    seq_length = 0
+    for locked in only_locked:
+        if locked:
+            if not in_sequence:
+                in_sequence = True
+                seq_length = 1
+            else:
+                seq_length += 1
+        else:
+            if in_sequence:
+                in_sequence = False
+                if seq_length > 3:
+                    sequence_lengths.append(seq_length)
+    return np.mean(sequence_lengths) * time_points[1]
+
+
+    pass
 # Main function
 def main():
     # Connection details
@@ -100,7 +126,13 @@ def main():
 
 
     # Plot the data
-    plot_csv_data("root/acquisition_data.csv")
+    data = np.loadtxt("root/acquisition_data.csv", delimiter=",")
+    # Extract time points and signal values
+    time_points = data[:, 0]
+    signal = data[:, 1]
+    plot_csv_data(signal, time_points, volts=False)
+    average_lock_time = analyze_locking_time(signal, time_points)
+    print(f"Average Lock Time {average_lock_time}")
 
 
 if __name__ == "__main__":

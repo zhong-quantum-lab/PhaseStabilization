@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 red_pitaya_ip = "205.208.56.215"  # Replace with your Red Pitaya's IP
 port = 8900  # Port for streaming
 data_format = "wav"  # Format of the data (WAV file)
-sample_limit = 2000000  # Number of samples to capture
+sample_limit = 1000000  # Number of samples to capture
 #sample_limit = 200  # Number of samples to capture
-mode = "volt"  # Data mode: 'raw' or 'volt'
+mode = "raw"  # Data mode: 'raw' or 'volt'
 rpsa_client_path = "/home/halowens/Downloads/rpsa_client-2.00-35-aff683518/rpsa_client"
 output_directory = "./Dump"  # Directory where WAV files are stored
 
