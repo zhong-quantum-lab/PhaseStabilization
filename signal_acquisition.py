@@ -107,7 +107,7 @@ def analyze_locking_time(signal, time_points):
         else:
             if in_sequence:
                 in_sequence = False
-                if seq_length > 3:
+                if seq_length > 8:
                     sequence_lengths.append(seq_length)
     return np.mean(sequence_lengths) * time_points[1]
 
