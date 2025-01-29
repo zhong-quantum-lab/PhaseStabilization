@@ -2,37 +2,23 @@ import paramiko
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib
+
 matplotlib.use('TkAgg')  # Use the TkAgg backend for interactive plotting
 import os
 import fnmatch
 
-def fetch_files_from_directory(host, username, password, remote_directory, files=[]):
-    """
-    Fetch specific files from a remote directory on Red Pitaya via SCP.
 
-    Parameters:
-    - host (str): IP or hostname of the Red Pitaya.
-    - username (str): SSH username.
-    - password (str): SSH password.
-    - remote_directory (str): Remote directory to fetch files from.
-    - files (list of str): List of filenames or wildcard patterns (e.g., "*.png").
-    """
+def fetch_files_from_directory(host, username, password, remote_directory, files=[]):
     try:
-        # Set up SSH client
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(host, username=username, password=password)
 
-        # Use SFTP to fetch the files
         with ssh.open_sftp() as sftp:
-            # Ensure the local directory exists
             local_directory = os.path.basename(remote_directory) or "downloads"
             os.makedirs(local_directory, exist_ok=True)
 
-            # List all files in the remote directory
             remote_files = sftp.listdir(remote_directory)
-
-            # Filter files based on the provided list (supports wildcards)
             for pattern in files:
                 matching_files = fnmatch.filter(remote_files, pattern)
                 for file in matching_files:
@@ -46,26 +32,21 @@ def fetch_files_from_directory(host, username, password, remote_directory, files
     finally:
         ssh.close()
 
-# Plot the CSV data
-def plot_csv_data(signal, time_points, volts=True):
-    """Plot the data from the CSV file."""
-    try:
 
-        # Plot the signal data
-        plt.figure(figsize=(10, 6))
-        if volts:
-            signal = signal/8196
-        plt.plot(time_points, signal, label="Signal")
-        plt.title("Signal Data from Red Pitaya", fontsize=16)
-        plt.xlabel("Time (s)", fontsize=14)
-        plt.ylabel("Amplitude", fontsize=14)
-        plt.legend(fontsize=12)
-        plt.grid(True, linestyle="--", alpha=0.6)
-        plt.tight_layout()
+def plot_csv_data(signal, time_points, volts=True, fft=False):
+    plt.figure(figsize=(10, 6))
+    if volts:
+        signal = signal / 8196
+    plt.plot(time_points, signal, label="Signal")
+    plt.title("Signal Data from Red Pitaya", fontsize=16)
+    plt.xlabel("Time (s)", fontsize=14)
+    plt.ylabel("Amplitude", fontsize=14)
+    plt.legend(fontsize=12)
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.tight_layout()
 
-        # Compute the FFT
+    if fft:
         sampling_interval = time_points[1] - time_points[0]  # Calculate sampling interval from time data
-        sampling_rate = 1 / sampling_interval
         fft_data = np.fft.fft(signal)
         fft_freqs = np.fft.fftfreq(len(signal), d=sampling_interval)
 
@@ -82,10 +63,8 @@ def plot_csv_data(signal, time_points, volts=True):
         plt.legend(fontsize=12)
         plt.grid(True, linestyle="--", alpha=0.6)
         plt.tight_layout()
+    plt.show()
 
-        plt.show()
-    except Exception as e:
-        print(f"Error reading or plotting data: {e}")
 
 def analyze_locking_time(signal, time_points):
     def in_range(val):
@@ -94,6 +73,8 @@ def analyze_locking_time(signal, time_points):
         return lock_value + lock_width > val > lock_value - lock_width
 
     only_locked = [in_range(val) for val in signal]
+    filter_cutoff = 200
+    time_width = time_points[1]
     in_sequence = False
     sequence_lengths = []
     seq_length = 0
@@ -107,12 +88,22 @@ def analyze_locking_time(signal, time_points):
         else:
             if in_sequence:
                 in_sequence = False
-                if seq_length > 8:
+                if seq_length > filter_cutoff:
                     sequence_lengths.append(seq_length)
-    return np.mean(sequence_lengths) * time_points[1]
-
+    print(f"Number of locked sequences = {len(sequence_lengths)}")
+    print(f"One sample is {time_width} long")
+    print(f"Locking Length cutoff is {time_width * filter_cutoff}")
+    print(f"Average Lock Time {np.mean(sequence_lengths) * time_width}")
+    plt.figure()
+    plt.plot(time_points, signal)
+    plt.figure()
+    plt.plot(only_locked)
+    plt.show()
+    return np.mean(sequence_lengths) * time_width
 
     pass
+
+
 # Main function
 def main():
     # Connection details
@@ -124,15 +115,13 @@ def main():
         files=["data.csv", "*.png", "acquisition_data.csv"]
     )
 
-
     # Plot the data
     data = np.loadtxt("root/acquisition_data.csv", delimiter=",")
     # Extract time points and signal values
     time_points = data[:, 0]
     signal = data[:, 1]
     plot_csv_data(signal, time_points, volts=False)
-    average_lock_time = analyze_locking_time(signal, time_points)
-    print(f"Average Lock Time {average_lock_time}")
+    #average_lock_time = analyze_locking_time(signal, time_points, fft=True)
 
 
 if __name__ == "__main__":
