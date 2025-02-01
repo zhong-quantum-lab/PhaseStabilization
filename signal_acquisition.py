@@ -111,17 +111,17 @@ def main():
         host="205.208.56.215",
         username="root",
         password="root",
-        remote_directory="/root",
+        remote_directory="/root/PhaseStabilization/RedPitayaPid/",
         files=["data.csv", "*.png", "acquisition_data.csv"]
     )
 
     # Plot the data
-    data = np.loadtxt("root/acquisition_data.csv", delimiter=",")
+    data = np.loadtxt("downloads/acquisition_data.csv", delimiter=",")
     # Extract time points and signal values
     time_points = data[:, 0]
     signal = data[:, 1]
     plot_csv_data(signal, time_points, volts=False)
-    #average_lock_time = analyze_locking_time(signal, time_points, fft=True)
+    average_lock_time = analyze_locking_time(signal, time_points)
 
 
 if __name__ == "__main__":
