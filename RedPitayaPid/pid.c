@@ -28,9 +28,9 @@ unsigned read_register(volatile unsigned *map_base, off_t offset) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        fprintf(stderr, "Usage: %s <Kp> <Ki> <Kd>\n", argv[0]);
-        fprintf(stderr, "Each parameter must be a signed integer between -8196 and 8196.\n");
+    if (argc != 5) {
+        fprintf(stderr, "Usage: %s <Kp> <Ki> <Kd> <Setpoint>\n", argv[0]);
+        fprintf(stderr, "Each parameter must be a signed integer between -8196 and 8196 (-1 to 1 V).\n");
         return EXIT_FAILURE;
     }
 
@@ -38,15 +38,13 @@ int main(int argc, char *argv[]) {
     int kp = atoi(argv[1]);
     int ki = atoi(argv[2]);
     int kd = atoi(argv[3]);
+    int setpoint = atoi(argv[4]); 
 
     // Validate the range of inputs
     if (kp < -8196 || kp > 8196 || ki < -8196 || ki > 8196 || kd < -8196 || kd > 8196) {
         fprintf(stderr, "Error: All parameters must be in the range -8196 to 8196.\n");
         return EXIT_FAILURE;
     }
-
-    // Hardcoded setpoint
-    const int setpoint = 1639; 
 
     int fd;
     volatile unsigned *map_base;
@@ -75,13 +73,6 @@ int main(int argc, char *argv[]) {
     write_register(map_base, PID11_KP_OFFSET, (unsigned)kp);
     write_register(map_base, PID11_KI_OFFSET, (unsigned)ki);
     write_register(map_base, PID11_KD_OFFSET, (unsigned)kd);
-
-    // Verify the written values (optional)
-    //printf("\nWritten Values:\n");
-    //printf("Setpoint: 0x%X\n", read_register(map_base, PID11_SP_OFFSET));
-    //printf("Kp: 0x%X\n", read_register(map_base, PID11_KP_OFFSET));
-    //printf("Ki: 0x%X\n", read_register(map_base, PID11_KI_OFFSET));
-    //printf("Kd: 0x%X\n", read_register(map_base, PID11_KD_OFFSET));
 
     // Unmap memory and close /dev/mem
     if (munmap((void *)map_base, 4096) == -1) {
