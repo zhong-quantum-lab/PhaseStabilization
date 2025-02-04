@@ -36,9 +36,9 @@ class RP_Streamer():
                 stderr=subprocess.PIPE,
                 text=True,
             ) as proc:
-                print(f"Capturing {samples} samples to WAV file in {self.save_directory}...")
+                #print(f"Capturing {samples} samples to WAV file in {self.save_directory}...")
                 stdout, stderr = proc.communicate()  # Wait for the command to complete
-                print(stdout)
+                #print(stdout)
             return self.get_last_capture_data()
 
         except Exception as e:
@@ -49,12 +49,13 @@ class RP_Streamer():
         if not new_wav_files:
             print("No file found after capture.")
         new_wav_file = max(new_wav_files, key=os.path.getctime)  # Get the newest file
-        print(f"Reading data from {new_wav_file}...")
+        #print(f"Reading data from {new_wav_file}...")
         self.last_capture_data, self.last_capture_samplerate = sf.read(new_wav_file)  # Reads float32 data
         return self.last_capture_data, self.last_capture_samplerate
 
 
     def set_decimation(self, decimation):
+        print(f"Sample rate = {125e3/decimation} (kHz)")
         config = {
             "adc_streaming": {
                 "attenuator": 0,
