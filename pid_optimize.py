@@ -3,12 +3,18 @@ from remote_pid import RP_Pid
 import numpy as np
 import pygad
 import matplotlib.pyplot as plt
+import os
 
 # Define your setup
 pid_pitaya_ip = "205.208.56.215"
 capture_pitaya_ip = "10.120.12.220"
-captures = 1000
+captures = 10000
 setpoint = 4096  # Configurable setpoint
+
+# Create log directory
+log_dir = "pid_optimization_log"
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, "fitness_log.txt")
 
 # Initialize the streamer and PID controller
 streamer = RP_Streamer(capture_pitaya_ip)
@@ -33,18 +39,23 @@ def fitness_func(ga_instance, solution, solution_idx):
     mse = np.mean((data_stable - setpoint_mapped) ** 2)
     fitness = 1 / mse  # Optimize for lower mse
 
-    print(f"MSE: {mse:.6f}, Fitness: {fitness:.6f}\n")
+    log_entry = f"Generation: {ga_instance.generations_completed}, Solution Index: {solution_idx}, Kp: {kp:.4f}, Ki: {ki:.4f}, Kd: {kd:.4f}, MSE: {mse:.6f}, Fitness: {fitness:.6f}\n"
+    print(log_entry)
     print("-----------------------------------------")
 
     # Store fitness value
     fitness_history.append(fitness)
 
+    # Save log entry to file
+    with open(log_file, "a") as f:
+        f.write(log_entry)
+
     return fitness
 
 
-num_generations = 15
-num_parents_mating = 5
-sol_per_pop = 10
+num_generations = 50
+num_parents_mating = 4
+sol_per_pop = 8
 num_genes = 3
 
 # Define parameter ranges
@@ -60,7 +71,7 @@ ga_instance = pygad.GA(
     init_range_low=init_range_low,
     init_range_high=init_range_high,
     parent_selection_type="sss",
-    keep_parents=3,
+    keep_parents=1,
     crossover_type="single_point",
     mutation_type="random",
     mutation_num_genes=1
@@ -85,4 +96,11 @@ plt.xlabel("Trial")
 plt.ylabel("Fitness Value")
 plt.title("Fitness Evolution Over Trials")
 plt.grid()
+
+# Save plot to file
+plot_path = os.path.join(log_dir, "fitness_plot.png")
+plt.savefig(plot_path)
 plt.show()
+
+print(f"Log saved to: {log_file}")
+print(f"Plot saved to: {plot_path}")
