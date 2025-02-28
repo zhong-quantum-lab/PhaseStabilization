@@ -3,6 +3,8 @@ import glob
 import subprocess
 import soundfile as sf
 import json
+import time
+import requests
 class RP_Streamer():
     def __init__(self, rp_ip, data_format="wav", port=8900, mode="raw", save_directory="./Dump"):
         self.red_pitaya_ip = rp_ip # Replace with your Red Pitaya's IP
@@ -15,8 +17,6 @@ class RP_Streamer():
         files = glob.glob(os.path.join(self.save_directory, "*.*"))
         for file in files:
             os.remove(file)
-    def capture_signal_time(self, time):
-        pass
 
     def capture_signal(self, samples):
         try:
@@ -52,7 +52,6 @@ class RP_Streamer():
         #print(f"Reading data from {new_wav_file}...")
         self.last_capture_data, self.last_capture_samplerate = sf.read(new_wav_file)  # Reads float32 data
         return self.last_capture_data, self.last_capture_samplerate
-
 
     def set_decimation(self, decimation):
         print(f"Sample rate = {125e3/decimation} (kHz)")
@@ -101,5 +100,6 @@ class RP_Streamer():
             print(f"Transferring updated config to {self.red_pitaya_ip}...")
             subprocess.run(scp_command, check=True)
             print("Decimation value updated and config file transferred successfully.")
+
         except subprocess.CalledProcessError as e:
             print(f"Error transferring config file: {e}")

@@ -8,14 +8,15 @@ from remote_streaming import RP_Streamer
 def plot_pid_comparison(data_unstable, data_stable, samplerate):
     time = np.arange(len(data_unstable)) / samplerate  # Compute time axis
 
-    channel_1_unstable = data_unstable[:, 0]  # Interferometer signal (Unstabilized)
-    channel_1_stable = data_stable[:, 0]  # Interferometer signal (Stabilized)
-
-    if data_unstable.shape[1] == 2:
+    if len(data_unstable.shape) > 1 and data_unstable.shape[1] == 2:
         channel_2_unstable = data_unstable[:, 1]  # PID channel (Unstabilized)
         channel_2_stable = data_stable[:, 1]  # PID channel (Stabilized)
+        channel_1_unstable = data_unstable[:, 0]  # Interferometer signal (Unstabilized)
+        channel_1_stable = data_stable[:, 0]  # Interferometer signal (Stabilized)
     else:
         channel_2_unstable, channel_2_stable = None, None
+        channel_1_unstable = data_unstable
+        channel_1_stable = data_stable
 
     plt.figure(figsize=(10, 4))
     plt.plot(time, channel_1_unstable, label="Unstabilized", color='red', alpha=0.7)
@@ -84,15 +85,16 @@ def plot_pid_comparison(data_unstable, data_stable, samplerate):
     plt.show()
 
 
-pid_pitaya_ip = "205.208.56.215"
-capture_pitaya_ip = "10.120.12.220"
-captures = 10000
+pid_pitaya_ip = "205.208.56.197"
+capture_pitaya_ip = "10.120.12.217"
+captures = 2000000
 streamer = RP_Streamer(capture_pitaya_ip)
-#streamer.set_decimation(2**17)
 pid = RP_Pid(pid_pitaya_ip)
 pid.clear_pid()
 data_unstable, samplerate = streamer.capture_signal(captures)
-pid.set_pid(8000, 400, -20, 4096)
+pid.set_pid(11,-4694, -5066, -6877, 4096)
+pid.set_pid(21,7885, -1339, -6323, 4096)
 data_stable, _samplerate = streamer.capture_signal(captures)
 print(f"sample rate {samplerate}")
 plot_pid_comparison(data_unstable, data_stable, samplerate)
+#Generation: 10, Solution Index: 7, PID11: (-4694.157897872907, -5066.616263973208, -6877.595997103696), PID21: (7885.3966588149315, -1339.5285591061656, -6323.529386646438)  Fitness: 0.057666
