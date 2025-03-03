@@ -2,7 +2,7 @@ import asyncio
 import subprocess
 import websockets
 
-async def shell_command_handler(websocket, path):
+async def shell_command_handler(websocket):
     async for message in websocket:
         # Execute the command using subprocess
         process = subprocess.Popen(
