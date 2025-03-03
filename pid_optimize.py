@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import os
 
 # Define your setup
-pid_pitaya_ip = "205.208.56.197"
+pid_pitaya_ip = "rp-f0cace.local"
 capture_pitaya_ip = "10.120.12.217"
-captures = 1000000
+captures = 100000
 setpoint = 4096  # Configurable setpoint
 
 # Create log directory
@@ -29,14 +29,16 @@ fitness_history = []
 
 
 def fitness_func(ga_instance, solution, solution_idx):
-    kp11, ki11, kd11, kp21, ki21, kd21  = solution  # Extract parameters
-    pid.set_pid(11, int(kp11), int(ki11), int(kd11), setpoint)
-    pid.set_pid(21, int(kp21), int(ki21), int(kd21), setpoint)
-    data_stable, _ = streamer.capture_signal(captures)
+    kp11, ki11, kd11, kp21, ki21, kd21  = map(lambda x: int(x), solution) # Extract parameters
+    pid.set_pid(11, kp11, ki11, kd11, setpoint)
+    pid.set_pid(21, kp21, ki21, kd21, setpoint)
+    data_stable, rate = streamer.capture_signal(captures)
     distance = (data_stable - (setpoint / 8192)) ** 2
-    fitness = -1*np.sum(distance)
+    derivative = (data_stable[1:] - data_stable[0:-1])**2
+    fitness = -1*(np.sum(distance) + np.sum(derivative))
     plt.figure(figsize=(8, 6))
-    plt.plot(data_stable)
+    time = [i/rate for i in range(len(data_stable))]
+    plt.plot(time, data_stable)
     plt.xlabel("Time")
     plt.ylabel("Signal")
     plt.title(f"Generation={ga_instance.generations_completed}, Solution Index={solution_idx}, Fitness={fitness}")
@@ -47,10 +49,9 @@ def fitness_func(ga_instance, solution, solution_idx):
     filename = f"Idx_{solution_idx}.png"
     plt.savefig(f"{path}/{filename}")
     plt.close()
+    print("-----------------------------------------")
     log_entry = f"Generation: {ga_instance.generations_completed}, Solution Index: {solution_idx}, PID11: ({kp11}, {ki11}, {kd11}), PID21: ({kp21}, {ki21}, {kd21})  Fitness: {fitness:.6f}\n"
     print(log_entry)
-    print(f"Fitness = {fitness}")
-    print("-----------------------------------------")
 
     fitness_history.append(fitness)
     plt.plot(fitness_history)
@@ -64,12 +65,31 @@ def fitness_func(ga_instance, solution, solution_idx):
 
 num_generations = 25
 num_parents_mating = 6
-sol_per_pop = 12
-num_genes = 6
+sol_per_pop = 12  # Total population size
+num_genes = 6  # Number of parameters being optimized
 
-# Define parameter ranges
-init_range_low = -8096
-init_range_high = 8096
+# Define parameter-specific ranges
+param_ranges = np.array([
+    [-8195, 8195],   # Gene 1 range
+    [-2000, 2000],      # Gene 2 range
+    [-100, 100], # Gene 3 range
+    [-8195, 8195],    # Gene 4 range
+    [-2000, 2000], # Gene 5 range
+    [-100, 100]      # Gene 6 range
+])
+
+# Manually define a few initial members
+manual_solutions = np.array([
+    [8000, 500, 0, -2000, 0, 20]])
+
+# Generate the rest of the population randomly within specified ranges
+num_random_solutions = sol_per_pop - manual_solutions.shape[0]
+random_solutions = np.array([
+    np.random.uniform(low=param_ranges[i, 0], high=param_ranges[i, 1], size=num_random_solutions)
+    for i in range(num_genes)
+]).T
+
+initial_population = np.vstack((manual_solutions, random_solutions))
 
 ga_instance = pygad.GA(
     num_generations=num_generations,
@@ -77,8 +97,7 @@ ga_instance = pygad.GA(
     fitness_func=fitness_func,
     sol_per_pop=sol_per_pop,
     num_genes=num_genes,
-    init_range_low=init_range_low,
-    init_range_high=init_range_high,
+    initial_population=initial_population,  # Custom initial population
     parent_selection_type="rws",
     keep_parents=4,
     crossover_type="single_point",
@@ -86,6 +105,7 @@ ga_instance = pygad.GA(
     mutation_num_genes=2
 )
 
+# Run the GA
 ga_instance.run()
 
 # Retrieve best solution
