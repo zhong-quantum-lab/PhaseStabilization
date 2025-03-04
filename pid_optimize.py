@@ -8,7 +8,7 @@ import os
 # Define your setup
 pid_pitaya_ip = "rp-f0cace.local"
 capture_pitaya_ip = "10.120.12.217"
-captures = 100000
+captures = 1500000
 setpoint = 4096  # Configurable setpoint
 
 # Create log directory
@@ -29,7 +29,8 @@ fitness_history = []
 
 
 def fitness_func(ga_instance, solution, solution_idx):
-    kp11, ki11, kd11, kp21, ki21, kd21  = map(lambda x: int(x), solution) # Extract parameters
+    #kp11, ki11, kd11, kp21, ki21, kd21  = map(lambda x: int(x), solution) # Extract parameters
+    kp11, ki11, kd11, kp21, ki21, kd21  = solution # Extract parameters
     pid.set_pid(11, kp11, ki11, kd11, setpoint)
     pid.set_pid(21, kp21, ki21, kd21, setpoint)
     data_stable, rate = streamer.capture_signal(captures)
@@ -50,7 +51,7 @@ def fitness_func(ga_instance, solution, solution_idx):
     plt.savefig(f"{path}/{filename}")
     plt.close()
     print("-----------------------------------------")
-    log_entry = f"Generation: {ga_instance.generations_completed}, Solution Index: {solution_idx}, PID11: ({kp11}, {ki11}, {kd11}), PID21: ({kp21}, {ki21}, {kd21})  Fitness: {fitness:.6f}\n"
+    log_entry = f"Generation: {ga_instance.generations_completed}, Solution Index: {solution_idx}\n   PID11: ({kp11}, {ki11}, {kd11})\n   PID21: ({kp21}, {ki21}, {kd21})\n   Fitness: {fitness:.6f}\n"
     print(log_entry)
 
     fitness_history.append(fitness)
@@ -65,22 +66,26 @@ def fitness_func(ga_instance, solution, solution_idx):
 
 num_generations = 25
 num_parents_mating = 6
-sol_per_pop = 12  # Total population size
+sol_per_pop = 15  # Total population size
 num_genes = 6  # Number of parameters being optimized
 
 # Define parameter-specific ranges
 param_ranges = np.array([
     [-8195, 8195],   # Gene 1 range
-    [-2000, 2000],      # Gene 2 range
-    [-100, 100], # Gene 3 range
+    [-8000, 8000],      # Gene 2 range
+    [-8000, 8000], # Gene 3 range
     [-8195, 8195],    # Gene 4 range
-    [-2000, 2000], # Gene 5 range
-    [-100, 100]      # Gene 6 range
+    [-8000, 8000], # Gene 5 range
+    [-8000, 8000]      # Gene 6 range
 ])
 
 # Manually define a few initial members
 manual_solutions = np.array([
-    [8000, 500, 0, -2000, 0, 20]])
+    [8000, 500, 0, -2000, 0, 20],
+    [5000, 500, 0, -2000, 1000, 500],
+    [4000, 500, 100, -2000, 100, 20],
+    [-4000, -500, 0, -2000, 0, 20],
+    [7000, 1000, 150, -3000, 0, 100]])
 
 # Generate the rest of the population randomly within specified ranges
 num_random_solutions = sol_per_pop - manual_solutions.shape[0]
@@ -97,12 +102,15 @@ ga_instance = pygad.GA(
     fitness_func=fitness_func,
     sol_per_pop=sol_per_pop,
     num_genes=num_genes,
+    gene_type=int,
     initial_population=initial_population,  # Custom initial population
-    parent_selection_type="rws",
-    keep_parents=4,
+    parent_selection_type="sss",
+    keep_elitism=3,
     crossover_type="single_point",
     mutation_type="random",
-    mutation_num_genes=2
+    random_mutation_max_val=250,
+    random_mutation_min_val=-250,
+    mutation_probability=0.3
 )
 
 # Run the GA

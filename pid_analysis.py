@@ -87,7 +87,7 @@ def plot_pid_comparison(data_unstable, data_stable, samplerate):
 
 pid_pitaya_ip = "205.208.56.197"
 capture_pitaya_ip = "10.120.12.217"
-captures = 2000000
+captures = 10000
 streamer = RP_Streamer(capture_pitaya_ip)
 pid = RP_Pid(pid_pitaya_ip)
 pid.clear_pid()
