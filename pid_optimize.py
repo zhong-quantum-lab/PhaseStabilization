@@ -7,9 +7,9 @@ import os
 
 # Define your setup
 pid_pitaya_ip = "rp-f0cace.local"
-capture_pitaya_ip = "10.120.12.217"
-captures = 1500000
-setpoint = 4096  # Configurable setpoint
+capture_pitaya_ip = "10.120.12.200"
+captures = 1000000
+setpoint = 800# Configurable setpoint
 
 # Create log directory
 log_dir = "pid_optimization_log"
@@ -75,17 +75,17 @@ param_ranges = np.array([
     [-8000, 8000],      # Gene 2 range
     [-8000, 8000], # Gene 3 range
     [-8195, 8195],    # Gene 4 range
-    [-8000, 8000], # Gene 5 range
-    [-8000, 8000]      # Gene 6 range
+    [-500, 500], # Gene 5 range
+    [0, 0]      # Gene 6 range
 ])
 
 # Manually define a few initial members
 manual_solutions = np.array([
-    [8000, 500, 0, -2000, 0, 20],
-    [5000, 500, 0, -2000, 1000, 500],
-    [4000, 500, 100, -2000, 100, 20],
-    [-4000, -500, 0, -2000, 0, 20],
-    [7000, 1000, 150, -3000, 0, 100]])
+    [8000, 500, 0, 500, 0, 0],
+    [5000, 500, 0, -2000, 0, 0],
+    [4000, 500, 100, -1000, 00, 0],
+    [-4000, -500, 0, 2000, 0, 0],
+    [7000, 1000, 150, 3000, 0, 00]])
 
 # Generate the rest of the population randomly within specified ranges
 num_random_solutions = sol_per_pop - manual_solutions.shape[0]

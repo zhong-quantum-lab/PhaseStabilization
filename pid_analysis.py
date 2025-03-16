@@ -85,15 +85,16 @@ def plot_pid_comparison(data_unstable, data_stable, samplerate):
     plt.show()
 
 
-pid_pitaya_ip = "205.208.56.197"
-capture_pitaya_ip = "10.120.12.217"
-captures = 10000
+pid_pitaya_ip = "rp-f0cace.local"
+capture_pitaya_ip = "10.120.12.200"
+captures = 1000000
 streamer = RP_Streamer(capture_pitaya_ip)
 pid = RP_Pid(pid_pitaya_ip)
 pid.clear_pid()
 data_unstable, samplerate = streamer.capture_signal(captures)
-pid.set_pid(11,-4694, -5066, -6877, 4096)
-pid.set_pid(21,7885, -1339, -6323, 4096)
+set_point = 800
+pid.set_pid(11,8000, 500, 0, set_point)
+pid.set_pid(21,500, 0, 0, set_point)
 data_stable, _samplerate = streamer.capture_signal(captures)
 print(f"sample rate {samplerate}")
 plot_pid_comparison(data_unstable, data_stable, samplerate)
