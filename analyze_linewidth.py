@@ -51,7 +51,7 @@ class SweepSegment:
 
 
 class ResonanceAnalyzer:
-    def __init__(self, path, sweep_width, start_freq=0.0):
+    def __init__(self, path, sweep_width, start_freq=0.0, plot=False):
         self.sweep_width = sweep_width
         self.start_freq = start_freq
         self.path = path
@@ -66,15 +66,19 @@ class ResonanceAnalyzer:
         print(f"Capture was {self.time[-1]} seconds long")
         print(f"Center freq of {np.mean(self.frequency)} GHz")
 
+        if plot:
+            plt.plot(self.time, self.data)
+            plt.show()
+
     def convert_to_voltage(self):
         self.cavity = self.cavity * 20
-        self.ramp = self.ramp * 200
+        self.ramp = self.ramp * 20
 
     def segment_capture_data(self, plot_segments=[], distance=300, window_size=100):
-        kernel = np.ones(int(window_size/8)) / window_size
+        kernel = np.ones(int(window_size)) / window_size
         ramp = np.convolve(self.ramp, kernel, mode='valid')
-        peak_indices, _ = find_peaks(ramp, distance=distance/8) # distance=1 means strict local maxima
-        valley_indices, _ = find_peaks(-ramp, distance=distance/8) # distance=1 means strict local minima
+        peak_indices, _ = find_peaks(ramp, distance=distance) # distance=1 means strict local maxima
+        valley_indices, _ = find_peaks(-ramp, distance=distance) # distance=1 means strict local minima
 
         turning_point_indices = np.union1d(peak_indices, valley_indices)
         turning_point_indices = np.union1d(turning_point_indices, [0, len(ramp) - 1])
@@ -88,7 +92,7 @@ class ResonanceAnalyzer:
             frequency_segment = np.linspace(self.start_freq, self.start_freq + self.sweep_width,
                                             num=len(cavity_segment))
             time_segment = self.time[start_idx: end_idx +1].tolist()
-            if np.max(ramp_segment) - np.min(ramp_segment) > 2.5 and ramp_segment[0] < ramp_segment[-1]:
+            if np.max(ramp_segment) - np.min(ramp_segment) > 2.0 and ramp_segment[0] < ramp_segment[-1]:
                 self.segments.append(SweepSegment(cavity_segment, ramp_segment, frequency_segment, time_segment))
 
         for i in plot_segments:
@@ -158,16 +162,40 @@ class ResonanceAnalyzer:
     def plot_fit_center(self):
         plt.figure()
         plt.plot(self.mean_times, self.fit_arrays["center"])
-        plt.title("Center over time")
+        plt.title("Fit Center over time")
         plt.xlabel("Seconds")
         plt.ylabel("Best fit center value")
 
+
+
     def plot_center(self):
         plt.figure()
-        plt.plot(self.mean_times, self.fit_arrays["center"])
+        plt.plot(self.mean_times, self.centers)
         plt.title("Center over time")
         plt.xlabel("Seconds")
         plt.ylabel("Center Freq")
+
+    def plot_center_fft(self):
+        times = self.mean_times
+        center_data = self.centers
+        dt = times[1]-times[2] #np.mean(np.diff(times))
+        n = len(center_data)
+
+        # Remove DC component
+        detrended = center_data - np.mean(center_data)
+
+        # Compute FFT and frequency axis
+        fft_vals = np.fft.fft(detrended)
+        fft_freqs = np.fft.fftfreq(n, d=dt)
+        pos_mask = fft_freqs > 0
+        fft_vals = fft_vals[pos_mask]
+        fft_freqs = fft_freqs[pos_mask]
+        plt.figure()
+        plt.loglog(fft_freqs, np.abs(fft_vals))
+        plt.title("FFT of Center Frequency")
+        plt.xlabel("Frequency [Hz]")
+        plt.ylabel("Amplitude")
+
 
     def plot_sigma(self):
         plt.figure()
@@ -217,12 +245,13 @@ class ResonanceAnalyzer:
 sigmas = []
 with open("ResonanceCaptures/Saves/metadata.json") as f:
     data = json.load(f)
-for target_file in ["8"]:
-    target_data = data[target_file]
-    analyzer = ResonanceAnalyzer(f"ResonanceCaptures/Saves/{target_file}.wav", target_data["stop_freq"]-target_data["start_freq"],
-                                 start_freq=target_data["start_freq"])
+for target_file in ["data_file_10.120.12.199_2025-08-19_18-28-03.wav"]:
+    #target_data = data[target_file]
+    #analyzer = ResonanceAnalyzer(f"ResonanceCaptures/Saves/{target_file}.wav", target_data["stop_freq"]-target_data["start_freq"],
+                                 #start_freq=target_data["start_freq"])
+    analyzer = ResonanceAnalyzer(f"ResonanceCaptures/Saves/{target_file}", 25, 194544, plot=False)
     #target_segments = [i for i in range(0, 15)]
-    target_segments=None
+    target_segments=[i for i in range(200)]
     analyzer.run_analysis(target_segments, plot_fit=False)
 
     ## Plotting
@@ -231,6 +260,8 @@ for target_file in ["8"]:
     #analyzer.plot_q()
     #analyzer.plot_amplitude()
     analyzer.plot_center()
+    analyzer.plot_fit_center()
+    analyzer.plot_center_fft()
     analyzer.plot_quality_factor()
     analyzer.plot_r_squared()
     #FWHM
